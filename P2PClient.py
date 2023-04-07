@@ -15,14 +15,18 @@ parser.add_argument('-transfer_port')
 parser.add_argument('-name')
 args = parser.parse_args()
 # path to folder with chunk data, port for connecting with other clients, name of client for logging
-folder, transfer_port, client_name = args.folder, args.transfer_port, args.name
+folder, client_port, client_name, client_ip = args.folder, args.transfer_port, args.name, "127.0.0.1"
 
 # parsing local_chunks.txt and extracting lines
 # var chunks is a list of each line in txt as strings
 with open(folder+'\\local_chunks.txt') as file:
 	raw_chunks = file.readlines()
 
-fileset_size = int(raw_chunks[-1][0])
+# number of total chunks in folder
+total_num_chunks = int(raw_chunks[-1][0])
+
+# the chunks in the client's folder currently
+chunk_set = set()
 
 
 # takes in file path and returns hash of file
@@ -46,11 +50,34 @@ for i in range(0, len(raw_chunks) - 1):
        chunk_path = raw_chunks[i][first_comma + 1: -1]
        chunk_hash = hash_file(folder + '\\' + chunk_path)
        parsed_chunks.append((index, chunk_hash))
+       chunk_set.add(index)
        
+print(parsed_chunks)
 
 # intializing client socket and establishing connection
 client_socket = socket(AF_INET, SOCK_STREAM)
 client_socket.connect(("127.0.0.1", 5100))
+
+# generating local chunks messages and updating P2PTracker about local chunks
+for chunk in parsed_chunks:
+    chunk_index, chunk_hash = chunk[0], chunk[1]   
+    message = ("LOCAL_CHUNKS", chunk_index, chunk_hash, client_ip, client_port)
+    message = ",".join(message)
+    time.sleep(0.1)
+    client_socket.send(message.encode())
+
+
+# asking P2PTracker where missing chunks are
+for i in range(1, total_num_chunks + 1):
+    if str(i) not in chunk_set:
+        message = ("WHERE_CHUNK", str(i))
+        message = ",".join(message)
+        time.sleep(0.1)
+        client_socket.send(message.encode())
+        res = client_socket.recv(4096).decode()
+        res = res.split(",")
+        print(res)
+
 
 
 if __name__ == "__main__":
