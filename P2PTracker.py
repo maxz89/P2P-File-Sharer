@@ -25,6 +25,9 @@ check_list = {}
 # dict with all connected clients and the checked chunks they have
 chunk_list = {}
 
+# dict with all verified hashes
+chunk_dict = {}
+
 def p2p_client_connection(socket, addr):
 	# addr_key is client ip appended to client port
 	addr_key = addr[0] + "," + str(addr[1])
@@ -50,10 +53,12 @@ def p2p_client_connection(socket, addr):
 						check_list[k].remove(chunk)
 						is_verified = True
 						break
-			if is_verified:
+			if is_verified or chunk_dict.get(chunk) == chunk_hash:
 				chunk_list[addr_key].append((chunk_index, chunk_hash))
+				chunk_dict[chunk_index] = chunk_hash
 			else:
 				check_list[addr_key].append((chunk_index, chunk_hash))
+
 			print("check list, ", check_list)
 			print("chunk list ", chunk_list)
 			print()

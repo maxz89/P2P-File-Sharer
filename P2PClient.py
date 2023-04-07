@@ -92,6 +92,7 @@ def tracker():
                     peer_thread.start()
         time.sleep(5)
 
+# receieves file from another peer
 def receive(peer_ip, peer_port, i):
     request_socket = socket(AF_INET, SOCK_STREAM)
     print("peer ip: " + peer_ip + ", peer port: " + peer_port)
@@ -118,6 +119,7 @@ peer_socket = socket(AF_INET, SOCK_STREAM)
 peer_socket.bind((client_ip, int(client_port)))
 peer_socket.listen(1)
 
+# sends files to another peer
 def send():
     while(True):
         send_socket, addr = peer_socket.accept()
@@ -129,8 +131,8 @@ def send():
             send_socket.sendall(buffer)
 
 tracker_thread = threading.Thread(target=tracker)
-tracker_thread.start()
 send_thread = threading.Thread(target=send)
+tracker_thread.start()
 send_thread.start()
 
 if __name__ == "__main__":
