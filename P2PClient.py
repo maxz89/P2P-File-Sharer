@@ -68,17 +68,23 @@ for chunk in parsed_chunks:
 
 
 # asking P2PTracker where missing chunks are
-for i in range(1, total_num_chunks + 1):
-    if str(i) not in chunk_set:
-        message = ("WHERE_CHUNK", str(i))
-        message = ",".join(message)
-        time.sleep(0.1)
-        client_socket.send(message.encode())
-        res = client_socket.recv(4096).decode()
-        res = res.split(",")
-        print(res)
+def request():
+    while(True):
+        for i in range(1, total_num_chunks + 1):
+            if str(i) not in chunk_set:
+                message = ("WHERE_CHUNK", str(i))
+                message = ",".join(message)
+                time.sleep(0.1)
+                client_socket.send(message.encode())
+                res = client_socket.recv(4096).decode()
+                res = res.split(",")
+                print(res)
+        time.sleep(5)
+    
 
 
+thread = threading.Thread(target=request)
+thread.start()
 
 if __name__ == "__main__":
 	pass
