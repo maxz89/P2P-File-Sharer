@@ -11,7 +11,7 @@ import logging
 
 # initializing server socket
 server_socket = socket(AF_INET, SOCK_STREAM)
-server_socket.bind(("127.0.0.1", 5100))
+server_socket.bind(("127.0.0.1", 5101))
 server_socket.listen(1)
 print("Server started on port 5100. Accepting connections")
 sys.stdout.flush()
@@ -28,13 +28,16 @@ chunk_list = {}
 def p2p_client_connection(socket, addr):
 	# addr_key is client ip appended to client port
 	addr_key = addr[0] + "," + str(addr[1])
-	check_list[addr_key] = []
-	chunk_list[addr_key] = []
 	while(True):
 		request = socket.recv(4096).decode()
 		request = request.split(",")
 		command = request[0]
 		if command == "LOCAL_CHUNKS":
+			addr_key = request[3] + "," + request[4]
+			if addr_key not in check_list.keys():
+				check_list[addr_key] = []
+			if addr_key not in chunk_list.keys():
+				chunk_list[addr_key] = []
 			print()
 			chunk_index, chunk_hash =  request[1], request[2]
 			is_verified = False

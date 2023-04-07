@@ -5,6 +5,8 @@ import sys
 import hashlib
 import time
 import logging
+import random
+import os
 
 # parsing command line arguments
 # p2pclient.py -folder <my-folder-full-path> -transfer_port <transfer-port-num> -name <entity-name>
@@ -28,6 +30,8 @@ total_num_chunks = int(raw_chunks[-1][0])
 # the chunks in the client's folder currently
 chunk_set = set()
 
+# chunks currently downloading
+temp_set = set()
 
 # takes in file path and returns hash of file
 def hash_file(file_path):
@@ -55,8 +59,8 @@ for i in range(0, len(raw_chunks) - 1):
 print(parsed_chunks)
 
 # intializing client socket and establishing connection
-client_socket = socket(AF_INET, SOCK_STREAM)
-client_socket.connect(("127.0.0.1", 5100))
+tracker_socket = socket(AF_INET, SOCK_STREAM)
+tracker_socket.connect(("127.0.0.1", 5101))
 
 # generating local chunks messages and updating P2PTracker about local chunks
 for chunk in parsed_chunks:
@@ -64,27 +68,70 @@ for chunk in parsed_chunks:
     message = ("LOCAL_CHUNKS", chunk_index, chunk_hash, client_ip, client_port)
     message = ",".join(message)
     time.sleep(0.1)
-    client_socket.send(message.encode())
+    tracker_socket.send(message.encode())
 
 
 # asking P2PTracker where missing chunks are
-def request():
+def tracker():
     while(True):
         for i in range(1, total_num_chunks + 1):
-            if str(i) not in chunk_set:
+            if str(i) not in chunk_set and str(i) not in temp_set:
                 message = ("WHERE_CHUNK", str(i))
                 message = ",".join(message)
                 time.sleep(0.1)
-                client_socket.send(message.encode())
-                res = client_socket.recv(4096).decode()
+                tracker_socket.send(message.encode())
+                res = tracker_socket.recv(4096).decode()
                 res = res.split(",")
-                print(res)
+                if (res[0] == "GET_CHUNK_FROM"):
+                    peers = (len(res) - 3) / 2
+                    peer_num = random.randint(0, peers - 1)
+                    peer_ip = res[peer_num * 2 + 3]
+                    peer_port = res[peer_num * 2 + 4]
+                    temp_set.add(str(i))
+                    peer_thread = threading.Thread(target=receive, args=(peer_ip, peer_port, i,))
+                    peer_thread.start()
         time.sleep(5)
+
+def receive(peer_ip, peer_port, i):
+    request_socket = socket(AF_INET, SOCK_STREAM)
+    print("peer ip: " + peer_ip + ", peer port: " + peer_port)
+    request_socket.connect((peer_ip, int(peer_port)))
+    chunk_index = str(i)
+    message = ("REQUEST_CHUNK", chunk_index)
+    message = ",".join(message)
+    request_socket.send(message.encode())
+    fpath = folder + "/chunk_" + chunk_index
+    with open(fpath, 'wb') as file:
+        buffer = request_socket.recv(1024)
+        file.write(buffer)
+    temp_set.remove(str(i))
+    chunk_set.add(str(i))
+    chunk_hash = hash_file(fpath)
+    message = ("LOCAL_CHUNKS", chunk_index, chunk_hash, client_ip, client_port)
+    message = ",".join(message)
+    time.sleep(0.1)
+    tracker_socket.send(message.encode())
+
     
 
+peer_socket = socket(AF_INET, SOCK_STREAM)
+peer_socket.bind((client_ip, int(client_port)))
+peer_socket.listen(1)
 
-thread = threading.Thread(target=request)
-thread.start()
+def send():
+    while(True):
+        send_socket, addr = peer_socket.accept()
+        message = send_socket.recv(1024).decode()
+        message = message.split(",")
+        fpath = folder + '/chunk_' + message[1]
+        with open(fpath, 'rb') as file:
+            buffer = file.read(1024)
+            send_socket.sendall(buffer)
+
+tracker_thread = threading.Thread(target=tracker)
+tracker_thread.start()
+send_thread = threading.Thread(target=send)
+send_thread.start()
 
 if __name__ == "__main__":
 	pass
