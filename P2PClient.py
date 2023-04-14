@@ -28,7 +28,7 @@ logger.setLevel(logging.DEBUG)
 
 # parsing local_chunks.txt and extracting lines
 # var chunks is a list of each line in txt as strings
-with open(folder+'\\local_chunks.txt') as file:
+with open(folder+'/local_chunks.txt') as file:
 	raw_chunks = file.readlines()
 
 # number of total chunks in folder
@@ -59,7 +59,7 @@ for i in range(0, len(raw_chunks) - 1):
        first_comma = raw_chunks[i].find(',')
        index = raw_chunks[i][0:first_comma]
        chunk_path = raw_chunks[i][first_comma + 1: -1]
-       chunk_hash = hash_file(folder + '\\' + chunk_path)
+       chunk_hash = hash_file(folder + '/' + chunk_path)
        parsed_chunks.append((index, chunk_hash))
        chunk_set.add(index)
        
