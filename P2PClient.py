@@ -7,6 +7,7 @@ import time
 import logging
 import random
 import os
+import logging
 
 # parsing command line arguments
 # p2pclient.py -folder <my-folder-full-path> -transfer_port <transfer-port-num> -name <entity-name>
@@ -18,6 +19,12 @@ parser.add_argument('-name')
 args = parser.parse_args()
 # path to folder with chunk data, port for connecting with other clients, name of client for logging
 folder, client_port, client_name, client_ip = args.folder, args.transfer_port, args.name, "127.0.0.1"
+
+# logging setup 
+
+logging.basicConfig(filename="logs.log", format="%(message)s", filemode="a")
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 # parsing local_chunks.txt and extracting lines
 # var chunks is a list of each line in txt as strings
@@ -60,13 +67,16 @@ print(parsed_chunks)
 
 # intializing client socket and establishing connection
 tracker_socket = socket(AF_INET, SOCK_STREAM)
-tracker_socket.connect(("127.0.0.1", 5101))
+tracker_socket.connect(("127.0.0.1", 5100))
 
 # generating local chunks messages and updating P2PTracker about local chunks
 for chunk in parsed_chunks:
     chunk_index, chunk_hash = chunk[0], chunk[1]   
     message = ("LOCAL_CHUNKS", chunk_index, chunk_hash, client_ip, client_port)
     message = ",".join(message)
+    log = (client_name, "LOCAL_CHUNKS", str(chunk_index), chunk_hash, "localhost", str(client_port))
+    log = ",".join(log)
+    logger.info(log)
     time.sleep(0.1)
     tracker_socket.send(message.encode())
 
@@ -78,6 +88,9 @@ def tracker():
             if str(i) not in chunk_set and str(i) not in temp_set:
                 message = ("WHERE_CHUNK", str(i))
                 message = ",".join(message)
+                log = (client_name, "WHERE_CHUNK", str(i))
+                log = ",".join(log)
+                logger.info
                 time.sleep(0.1)
                 tracker_socket.send(message.encode())
                 res = tracker_socket.recv(4096).decode()
@@ -100,6 +113,9 @@ def receive(peer_ip, peer_port, i):
     chunk_index = str(i)
     message = ("REQUEST_CHUNK", chunk_index)
     message = ",".join(message)
+    log = (client_name, "REQUEST_CHUNK", str(chunk_index), "localhost", str(peer_port))
+    log = ",".join(log)
+    logger.info(log)
     request_socket.send(message.encode())
     fpath = folder + "/chunk_" + chunk_index
     with open(fpath, 'wb') as file:
@@ -110,6 +126,9 @@ def receive(peer_ip, peer_port, i):
     chunk_hash = hash_file(fpath)
     message = ("LOCAL_CHUNKS", chunk_index, chunk_hash, client_ip, client_port)
     message = ",".join(message)
+    log = (client_name, "LOCAL_CHUNKS", str(chunk_index), chunk_hash, "localhost", str(client_port))
+    log = ",".join(log)
+    logger.info(log)
     time.sleep(0.1)
     tracker_socket.send(message.encode())
 

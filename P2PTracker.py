@@ -11,10 +11,16 @@ import logging
 
 # initializing server socket
 server_socket = socket(AF_INET, SOCK_STREAM)
-server_socket.bind(("127.0.0.1", 5101))
+server_socket.bind(("127.0.0.1", 5100))
 server_socket.listen(1)
 print("Server started on port 5100. Accepting connections")
 sys.stdout.flush()
+
+# logging setup 
+
+logging.basicConfig(filename="logs.log", format="%(message)s", filemode="a")
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 # array with all threads' sockets
 sockets = []
@@ -53,7 +59,7 @@ def p2p_client_connection(socket, addr):
 						check_list[k].remove(chunk)
 						is_verified = True
 						break
-			if is_verified or chunk_dict.get(chunk) == chunk_hash:
+			if is_verified or chunk_dict.get(chunk_index) == chunk_hash:
 				chunk_list[addr_key].append((chunk_index, chunk_hash))
 				chunk_dict[chunk_index] = chunk_hash
 			else:
@@ -82,10 +88,18 @@ def p2p_client_connection(socket, addr):
 			print("matching clients ", matching_clients)
 			if len(matching_clients) == 0:
 				response = ("CHUNK_LOCATION_UNKNOWN", target_chunk_index)
+				log = ("P2PTracker", "CHUNK_LOCATION_UNKNOWN", str(target_chunk_index))
+				log = ",".join(log)
+				logger.info(log)
 			else:
 				response = ["GET_CHUNK_FROM", target_chunk_index, target_chunk_hash]
+				log = ["P2PTracker", "GET_CHUNK_FROM", str(target_chunk_index), target_chunk_hash]
 				for client in matching_clients:
 					response.append(client)
+					log.append("localhost")
+					log.append(str(client.split(",")[1]))
+				log = ",".join(log)
+				logger.info(log)
 			print(response)
 			response = ",".join(response)
 			socket.send(response.encode())
