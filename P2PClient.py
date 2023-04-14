@@ -118,6 +118,8 @@ def receive(peer_ip, peer_port, i):
     logger.info(log)
     request_socket.send(message.encode())
     fpath = folder + "/chunk_" + chunk_index
+    filesize = int(request_socket.recv(1024))
+    print(filesize)
     with open(fpath, 'wb') as file:
         buffer = request_socket.recv(1024)
         file.write(buffer)
@@ -145,6 +147,8 @@ def send():
         message = send_socket.recv(1024).decode()
         message = message.split(",")
         fpath = folder + '/chunk_' + message[1]
+        filesize = os.path.getsize(fpath)
+        send_socket.send(filesize.encode())
         with open(fpath, 'rb') as file:
             buffer = file.read(1024)
             send_socket.sendall(buffer)
