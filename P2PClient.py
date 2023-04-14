@@ -90,7 +90,7 @@ def tracker():
                 message = ",".join(message)
                 log = (client_name, "WHERE_CHUNK", str(i))
                 log = ",".join(log)
-                logger.info
+                logger.info(log)
                 time.sleep(0.1)
                 tracker_socket.send(message.encode())
                 res = tracker_socket.recv(4096).decode()
@@ -118,11 +118,15 @@ def receive(peer_ip, peer_port, i):
     logger.info(log)
     request_socket.send(message.encode())
     fpath = folder + "/chunk_" + chunk_index
-    filesize = int(request_socket.recv(1024))
-    print(filesize)
+    filesize = int(request_socket.recv(1024).decode())
     with open(fpath, 'wb') as file:
-        buffer = request_socket.recv(1024)
-        file.write(buffer)
+        bytes = 0
+        while bytes < filesize:
+            buffer = request_socket.recv(1024)
+            if not buffer:
+                break
+            file.write(buffer)
+            bytes += len(buffer)
     temp_set.remove(str(i))
     chunk_set.add(str(i))
     chunk_hash = hash_file(fpath)
@@ -148,10 +152,13 @@ def send():
         message = message.split(",")
         fpath = folder + '/chunk_' + message[1]
         filesize = os.path.getsize(fpath)
-        send_socket.send(filesize.encode())
+        send_socket.send(str(filesize).encode())
         with open(fpath, 'rb') as file:
-            buffer = file.read(1024)
-            send_socket.sendall(buffer)
+            bytes = 0
+            while bytes < filesize:
+                buffer = file.read(1024)
+                send_socket.sendall(buffer)
+                bytes += len(buffer)
 
 tracker_thread = threading.Thread(target=tracker)
 send_thread = threading.Thread(target=send)
